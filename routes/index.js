@@ -1,19 +1,15 @@
 var express = require("express");
-const Comment = require("../models/Comments");
+const Comment = require("../models/Comment");
 var router = express.Router();
 
-/* GET home page. */
-router.get("/", function (req, res, next) {
-  res.end("Root Path");
-});
-
 router.post("/comment", async (req, res) => {
-  const { author, content } = req.body;
+  const { id, author, content } = req.body;
   try {
     await Comment.create({
       author,
       content,
       date: new Date(),
+      parentId: id || null,
     });
     return res.json({
       success: true,
@@ -43,12 +39,36 @@ router.get("/comment", async (req, res) => {
   }
 });
 
-router.put("/comment", async (req, res) => {
+router.post("/upvote/:id", async (req, res) => {
   try {
-    const { id, author, content } = req.body;
-    console.log(id, author, content);
-    await Comment.findByIdAndUpdate(id, {
-      $push: { replies: { author, content, date: new Date() } },
+    const { id } = req.params;
+    const comment = await Comment.findByIdAndUpdate(
+      id,
+      { $inc: { votes: 1 } },
+      { new: true }
+    );
+
+    return res.json({
+      success: true,
+      message: "Upvoted successfully",
+      data: comment.votes,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+    });
+  }
+});
+router.post("/downvote/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const comment = await Comment.findByIdAndUpdate(id, {
+      $inc: { votes: -1 },
+    });
+    return res.json({
+      success: true,
+      message: "Downvoted successfully",
+      data: comment.votes,
     });
   } catch (error) {
     return res.status(500).json({
